@@ -85,3 +85,4 @@ jobs:
         run: |
           echo "full_image_tag=DockerHubUserName/${{ inputs.image-name }}:latest" >> $GITHUB_OUTPUT
           echo "image_digest=${{ steps.build_and_push.outputs.digest }}" >> $GITHUB_OUTPUT
+
