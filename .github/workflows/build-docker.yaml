@@ -40,7 +40,8 @@ jobs:
   build_image:
     strategy:
       matrix:
-        runner: ["ubuntu-latest", "blacksmith-4vcpu-ubuntu-2404"]
+        #runner: ["ubuntu-latest", "blacksmith-4vcpu-ubuntu-2404"]
+        runner: ["ubuntu-latest", "ubuntu-22.04"]
       fail-fast: false  # Permite que los jobs continúen incluso si uno falla
     
     runs-on: ${{ matrix.runner }}
@@ -48,6 +49,9 @@ jobs:
     # Se usa 'id' para poder referenciar los outputs de este job más adelante.
     outputs:
       full_image_tag: ${{ steps.vars.outputs.full_image_tag }}
+
+    env: # 👈 Aquí defines variables globales al job
+      DOCKER_HUB_USERNAME: ${{ inputs.registry-username }}
 
     steps:
       - name: Checkout repository
@@ -59,7 +63,7 @@ jobs:
       - name: Log in to Docker Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ inputs.registry-username }}
+          username: ${{ env.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Get current date for image tag
@@ -74,14 +78,14 @@ jobs:
           file: ${{ inputs.dockerfile-path }}
           push: true
           tags: |
-            DockerHubUserName/${{ inputs.image-name }}:latest
-            DockerHubUserName/${{ inputs.image-name }}:${{ github.sha }}
-            DockerHubUserName/${{ inputs.image-name }}:${{ steps.date.outputs.DATE }}
+            ${{ env.DOCKER_HUB_USERNAME }}/${{ inputs.image-name }}:latest
+            ${{ env.DOCKER_HUB_USERNAME }}/${{ inputs.image-name }}:${{ github.sha }}
+            ${{ env.DOCKER_HUB_USERNAME }}/${{ inputs.image-name }}:${{ steps.date.outputs.DATE }}
           outputs: |
-            type=image,name=DockerHubUserName/${{ inputs.image-name }},name-canonical=true,push=true
+            type=image,name=${{ env.DOCKER_HUB_USERNAME }}/${{ inputs.image-name }},name-canonical=true,push=true
 
       - name: Set output variables
         id: vars
         run: |
-          echo "full_image_tag=DockerHubUserName/${{ inputs.image-name }}:latest" >> $GITHUB_OUTPUT
+          echo "full_image_tag=${{ env.DOCKER_HUB_USERNAME }}/${{ inputs.image-name }}:latest" >> $GITHUB_OUTPUT
           echo "image_digest=${{ steps.build_and_push.outputs.digest }}" >> $GITHUB_OUTPUT

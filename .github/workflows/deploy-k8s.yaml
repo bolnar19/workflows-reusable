@@ -34,7 +34,8 @@ jobs:
   deploy_to_kubernetes:
     strategy:
       matrix:
-        runner: ["ubuntu-latest", "blacksmith-4vcpu-ubuntu-2404"]
+        #runner: ["ubuntu-latest", "blacksmith-4vcpu-ubuntu-2404"]
+        runner: ["ubuntu-latest", "ubuntu-22.04"]
       fail-fast: false  # Permite que los jobs continúen incluso si uno falla
     
     runs-on: ${{ matrix.runner }}
@@ -43,21 +44,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
+      - name: Install KinD (Kubernetes-in-Docker)
+        uses: helm/kind-action@v1
         with:
-          version: 'v1.28.0' # Puedes especificar la versión de kubectl que prefieras
+          version: v0.22.0
 
-      - name: Set up Kubernetes configuration
+      - name: Verify cluster
+        run: kubectl get nodes
+
+      - name: Deploy sample app
         run: |
-          # Crea el directorio .kube si no existe
-          mkdir -p ~/.kube
-          # Decodifica el secreto KUBECONFIG (que debe estar en base64) y lo guarda en el archivo de configuración
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
-          # Establece permisos seguros para el archivo de configuración
-          chmod 600 ~/.kube/config
-        # Nota: Algunos KUBECONFIGs no están en base64 por defecto. Si el tuyo no lo está,
-        # quita el `| base64 -d` y asegúrate de que el secreto sea el contenido sin codificar.
+          kubectl create namespace default || true
+
+# Install kubectl to connect existing cluster
+#      - name: Install kubectl
+#        uses: azure/setup-kubectl@v3
+#        with:
+#          version: 'v1.28.0' # Puedes especificar la versión de kubectl que prefieras
+#
+#      - name: Set up Kubernetes configuration
+#        run: |
+#          # Crea el directorio .kube si no existe
+#          mkdir -p ~/.kube
+#          # Decodifica el secreto KUBECONFIG (que debe estar en base64) y lo guarda en el archivo de configuración
+#          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+#          # Establece permisos seguros para el archivo de configuración
+#          chmod 600 ~/.kube/config
+#        # Nota: Algunos KUBECONFIGs no están en base64 por defecto. Si el tuyo no lo está,
+#        # quita el `| base64 -d` y asegúrate de que el secreto sea el contenido sin codificar.
 
       - name: Create Kubernetes Deployment manifest
         id: generate_manifest
@@ -93,6 +107,10 @@ jobs:
         run: |
           kubectl apply -f deployment.yaml -n ${{ inputs.namespace }}
           echo "::notice::Deployment ${{ inputs.deployment-name }} applied successfully in namespace ${{ inputs.namespace }} with image ${{ inputs.image }}"
+
+      - name: Show Kubernetes services
+        run: |
+          kubectl get all -o wide -n ${{ inputs.namespace }}
 
       - name: Wait for Deployment rollout (optional)
         run: |
