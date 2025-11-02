@@ -99,4 +99,3 @@ jobs:
           kubectl rollout status deployment/${{ inputs.deployment-name }} -n ${{ inputs.namespace }} --timeout=5m
         # Este paso es útil para esperar a que el despliegue se complete antes de continuar.
         # Puedes ajustar el --timeout según tus necesidades.
-
